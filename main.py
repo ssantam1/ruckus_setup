@@ -1,10 +1,6 @@
 import serial
 import time
-
-hostname = 'TestHostname'
-ip_address = '10.1.100.49'
-subnet_mask = '255.255.255.0'
-default_gateway = '10.1.100.1'
+import config
 
 def send_command(ser: serial.Serial, command, sleep=1, wait_for=None):
     ser.write((command + '\n').encode())
@@ -33,17 +29,7 @@ def main():
         print("Failed to establish serial connection.")
         return
 
-    # Basic configuration commands
-    commands = [
-        '',  # Send newline to find out if it wants a login 
-        'enable',  # Enter privileged exec mode
-        'conf t',  # Enter global configuration mode
-        'hostname ' + hostname,  # Set hostname
-        'ip address ' + ip_address + ' ' + subnet_mask,  # Set IP address
-        'ip default-gateway ' + default_gateway,  # Set default gateway
-        ('crypto-ssl certificate generate', 'ssl-certificate creation is successful'),  # Generate RSA key and wait for prompt
-        'exit',  # Exit global configuration mode
-    ]
+    commands = config.commands
 
     # Send commands and print output as if you were doing it manually
     for command in commands:
