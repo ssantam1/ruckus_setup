@@ -1,7 +1,7 @@
 import serial
 import time
 
-def send_command(ser, command, sleep=1):
+def send_command(ser: serial.Serial, command, sleep=1):
     ser.write((command + '\n').encode())
     time.sleep(sleep)
     response = ser.read_all().decode()
@@ -18,7 +18,7 @@ def main():
         timeout=1
     )
 
-    if ser.isOpen():
+    if ser.is_open:
         print("Serial connection established.")
     else:
         print("Failed to establish serial connection.")
@@ -34,7 +34,7 @@ def main():
 
     for command in commands:
         response = send_command(ser, command)
-        print(f"Sent: {command}\nResponse: {response}")
+        print(response, end='')
 
     ser.close()
 
