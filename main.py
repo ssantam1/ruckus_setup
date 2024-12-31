@@ -1,16 +1,25 @@
 import serial
 import time
 
-def send_command(ser: serial.Serial, command, sleep=1):
+hostname = 'TestHostname'
+ip_address = '10.1.100.49'
+subnet_mask = '255.255.255.0'
+default_gateway = '10.1.100.1'
+
+def send_command(ser: serial.Serial, command, sleep=1, wait_for=None):
     ser.write((command + '\n').encode())
     time.sleep(sleep)
     response = ser.read_all().decode()
+    if wait_for:
+        print(response, end='')
+        while wait_for not in response:
+            time.sleep(1)
+            response = ser.read_all().decode()
     return response
 
 def main():
-    # Configure the serial connection
     ser = serial.Serial(
-        port=input('Enter COM port: '),  # Replace with your serial port
+        port=input('Enter COM port: '),
         baudrate=9600,
         parity=serial.PARITY_NONE,
         stopbits=serial.STOPBITS_ONE,
@@ -26,14 +35,22 @@ def main():
 
     # Basic configuration commands
     commands = [
-        'enable',
-        'configure terminal',
-        'hostname TestHostname',
-        'exit'
+        '',  # Send newline to find out if it wants a login 
+        'enable',  # Enter privileged exec mode
+        'conf t',  # Enter global configuration mode
+        'hostname ' + hostname,  # Set hostname
+        'ip address ' + ip_address + ' ' + subnet_mask,  # Set IP address
+        'ip default-gateway ' + default_gateway,  # Set default gateway
+        ('crypto-ssl certificate generate', 'ssl-certificate creation is successful'),  # Generate RSA key and wait for prompt
+        'exit',  # Exit global configuration mode
     ]
 
+    # Send commands and print output as if you were doing it manually
     for command in commands:
-        response = send_command(ser, command)
+        if isinstance(command, tuple):
+            response = send_command(ser, command[0], wait_for=command[1])
+        else:
+            response = send_command(ser, command)
         print(response, end='')
 
     ser.close()
