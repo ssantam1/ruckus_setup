@@ -35,6 +35,10 @@ def main():
 
     commands = config.commands
 
+    # Send a blank input to find out if we need to login or not
+    response = send_command('')
+    print(response, end='')
+
     # Send commands and print output as if you were doing it manually
     for command in commands:
         if isinstance(command, tuple):
