@@ -36,7 +36,7 @@ def main():
     commands = config.commands
 
     # Send a blank input to find out if we need to login or not
-    response = send_command('')
+    response = send_command(ser, '')
     print(response, end='')
 
     # Send commands and print output as if you were doing it manually
