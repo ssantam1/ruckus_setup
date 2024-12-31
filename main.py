@@ -2,10 +2,14 @@ import serial
 import time
 import config
 
-def send_command(ser: serial.Serial, command, sleep=1, wait_for=None):
-    ser.write((command + '\n').encode())
+def send_command(ser: serial.Serial, command: str, sleep=1):
+    ser.write(command.encode(), b'\n')
     time.sleep(sleep)
     response = ser.read_all().decode()
+    return response
+
+def send_command_with_wait(ser: serial.Serial, command, wait_for=None):
+    response = send_command(ser, command)
     if wait_for:
         print(response, end='')
         while wait_for not in response:
@@ -34,7 +38,7 @@ def main():
     # Send commands and print output as if you were doing it manually
     for command in commands:
         if isinstance(command, tuple):
-            response = send_command(ser, command[0], wait_for=command[1])
+            response = send_command_with_wait(ser, command[0], wait_for=command[1])
         else:
             response = send_command(ser, command)
         print(response, end='')
