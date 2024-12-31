@@ -3,7 +3,7 @@ import time
 import config
 
 def send_command(ser: serial.Serial, command: str, sleep=1):
-    ser.write(command.encode(), b'\n')
+    ser.write((command + '\n').encode())
     time.sleep(sleep)
     response = ser.read_all().decode()
     return response
