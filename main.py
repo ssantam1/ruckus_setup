@@ -39,13 +39,48 @@ class Connection:
             bytesize=serial.EIGHTBITS,
             timeout=1
         )
+        
+        # Send newline to get a prompt and check current access level
+        response = self.send_command('')
+        self.access_level = self.check_access_level(response)
+
+        if self.access_level is AccessLevel.LOGGED_OUT:
+            response = self.login(response=response)
+            self.access_level = self.check_access_level(response)
+
+        assert self.access_level is not AccessLevel.LOGGED_OUT
+
+    def check_access_level(self, response: str):
+        if response.endswith('(config)#'):
+            return AccessLevel.CONFIG
+        elif response.endswith('#'):
+            return AccessLevel.PRIVILEGED
+        if response.endswith('>'):
+            return AccessLevel.USER
+        else:
+            return AccessLevel.LOGGED_OUT
+        
+    def login(self, response:str=''):
+        # We may need to cycle through a few prompts to get to the username prompt
+        for _ in range(5):
+            if 'Please Enter Login Name:' in response:
+                break
+            response = self.send_command('')
+        else:
+            raise Exception('Could not find login prompt')
+
+        response = self.send_command(config.username)
+        assert 'Please Enter Password:' in response
+        response = self.send_command(config.password)
+        assert 'User login successful' in response
+
+        return response
 
     def send_command(self, command: str, sleep=1):
         self.ser.write((command + '\n').encode())
         time.sleep(sleep)
         response = self.ser.read_all().decode()
         return response
-
 
     def send_command_with_wait(self, command: str, wait_for=None):
         response = self.send_command(command)
@@ -64,11 +99,6 @@ def main():
     conn = Connection(port)
 
     commands = config.commands
-
-    # Send a blank input to find out if we need to login or not
-    response = conn.send_command('')
-    print(response, end='')
-
 
     # Send commands and print output as if you were doing it manually
     for command in commands:
