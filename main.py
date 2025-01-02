@@ -9,26 +9,6 @@ class AccessLevel(Enum):
     PRIVILEGED = 2
     CONFIG = 3
 
-    def __lt__(self, other):
-        if isinstance(other, AccessLevel):
-            return self.value < other.value
-        return NotImplemented
-
-    def __le__(self, other):
-        if isinstance(other, AccessLevel):
-            return self.value <= other.value
-        return NotImplemented
-
-    def __gt__(self, other):
-        if isinstance(other, AccessLevel):
-            return self.value > other.value
-        return NotImplemented
-
-    def __ge__(self, other):
-        if isinstance(other, AccessLevel):
-            return self.value >= other.value
-        return NotImplemented
-
 class Connection:
     def __init__(self, port):
         self.ser = serial.Serial(
@@ -39,7 +19,7 @@ class Connection:
             bytesize=serial.EIGHTBITS,
             timeout=1
         )
-        
+
         # Send newline to get a prompt and check current access level
         response = self.send_command('')
         self.access_level = self.check_access_level(response)
