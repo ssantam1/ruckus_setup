@@ -1,2 +1,6 @@
+# General environment and temporary files
 venv/
+__pycache__/
+
+# Settings potentially containing secrets
 config.py
