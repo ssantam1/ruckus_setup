@@ -1,6 +1,33 @@
 import serial
 import time
 import config
+from enum import Enum
+
+class AccessLevel(Enum):
+    LOGGED_OUT = 0
+    USER = 1
+    PRIVILEGED = 2
+    CONFIG = 3
+
+    def __lt__(self, other):
+        if isinstance(other, AccessLevel):
+            return self.value < other.value
+        return NotImplemented
+
+    def __le__(self, other):
+        if isinstance(other, AccessLevel):
+            return self.value <= other.value
+        return NotImplemented
+
+    def __gt__(self, other):
+        if isinstance(other, AccessLevel):
+            return self.value > other.value
+        return NotImplemented
+
+    def __ge__(self, other):
+        if isinstance(other, AccessLevel):
+            return self.value >= other.value
+        return NotImplemented
 
 class Connection:
     def __init__(self, port):
