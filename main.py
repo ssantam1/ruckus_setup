@@ -1,4 +1,5 @@
 import serial
+import serial.tools.list_ports
 import time
 import config
 from enum import Enum
@@ -75,7 +76,19 @@ class Connection:
         self.ser.close()
 
 def main():
-    port = input("Enter the COM port: ")
+    ports = serial.tools.list_ports.comports()
+    if not ports:
+        print('No COM ports found')
+        return
+    
+    if len(ports) == 1:
+        port = ports[0].device
+    else:
+        print('Multiple COM ports found:')
+        print('\n'.join([('  ' + port.device) for port in ports]))
+        port = input("Enter the desired COM port: ")
+    
+    print(f'Using COM port: {port}')
     conn = Connection(port)
 
     commands = config.commands
