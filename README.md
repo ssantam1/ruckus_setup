@@ -3,8 +3,7 @@ This script allows for defining a list of commands to be run on a Ruckus Switch 
 
 ### How?
 - Connect to your switch over serial
-- Determine COM port being used
-- Input the port number at runtime
+- The script auto-detects the available COM port
 - The commands defined in the config.py will then be quickly sent to the switch
 
 ### Why?
