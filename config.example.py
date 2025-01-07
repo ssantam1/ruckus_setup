@@ -7,13 +7,36 @@ default_gateway = '192.168.1.1'
 username = 'admin'
 password = 'admin' 
 
-# Basic configuration commands
+
+# Configuration commands
 commands = [
-    'enable',  # Enter privileged exec mode
-    'conf t',  # Enter global configuration mode
-    'hostname ' + hostname,  # Set hostname
-    'ip address ' + ip_address + ' ' + subnet_mask,  # Set IP address
-    'ip default-gateway ' + default_gateway,  # Set default gateway
-    ('crypto-ssl certificate generate', 'ssl-certificate creation is successful'),  # Generate RSA key and wait for prompt
-    'exit',  # Exit global configuration mode
+    {
+        'command': 'enable',
+        'validators': ['#'],  # Expect privileged prompt
+    },
+    {
+        'command': 'conf t',
+        'validators': ['(config)#'],  # Expect config prompt
+    },
+    {
+        'command': f'hostname {hostname}',
+        'validators': [f'{hostname}(config)#'],
+    },
+    {
+        'command': f'ip address {ip_address} {subnet_mask}',
+        'validators': ['Interface IP address is set'],
+    },
+    {
+        'command': f'ip default-gateway {default_gateway}',
+        'validators': ['Default gateway is set'],
+    },
+    {
+        'command': 'crypto-ssl certificate generate',
+        'wait_for': 'ssl-certificate creation is successful',  # Don't close connection until this is seen
+        'validators': ['Creating certificate, please wait'],
+    },
+    {
+        'command': 'exit',
+        'validators': ['#'],  # Expect privileged prompt
+    },
 ]

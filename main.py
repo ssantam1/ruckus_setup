@@ -3,6 +3,51 @@ import serial.tools.list_ports
 import time
 import config
 from enum import Enum
+from typing import Optional, List, Dict
+
+class Command:
+    def __init__(self, command_dict: Dict):
+        self.command = command_dict['command']
+        self.wait_for = command_dict.get('wait_for')
+        self.validators = command_dict.get('validators', [])
+        self.error_validators = command_dict.get('error_validators', [])
+
+    def validate_response(self, response: str) -> bool:
+        # Check for error conditions first
+        for error in self.error_validators:
+            if error in response:
+                raise Exception(f"Error in command execution: {error}")
+
+        # If no validators specified, any response is valid
+        if not self.validators:
+            return True
+
+        # Check if any validator matches
+        return any(validator in response for validator in self.validators)
+
+class CommandFactory:
+    @staticmethod
+    def create_rsa_key_command() -> Command:
+        return Command(
+            command="crypto key generate rsa",
+            wait_for="RSA Key pair is successfully created",
+            validators=[
+                "Creating RSA key pair, please wait",
+                "Key already exists"
+            ]
+        )
+
+    @staticmethod
+    def create_ssl_cert_command() -> Command:
+        return Command(
+            command="crypto-ssl certificate generate",
+            wait_for="ssl-certificate creation is successful",
+            validators=["Creating certificate, please wait"]
+        )
+
+    @staticmethod
+    def create_simple_command(command: str) -> Command:
+        return Command(command=command)
 
 class AccessLevel(Enum):
     LOGGED_OUT = 0
@@ -63,13 +108,20 @@ class Connection:
         response = self.ser.read_all().decode()
         return response
 
-    def send_command_with_wait(self, command: str, wait_for=None):
-        response = self.send_command(command)
-        if wait_for:
-            print(response, end='')
-            while wait_for not in response:
+    def execute_command(self, command: Command) -> str:
+        response = self.send_command(command.command)
+        
+        if command.wait_for:
+            print(f"Waiting for: {command.wait_for}")
+            while command.wait_for not in response:
                 time.sleep(1)
-                response = self.ser.read_all().decode()
+                new_response = self.ser.read_all().decode()
+                response += new_response
+                print(new_response, end='')
+
+        if not command.validate_response(response):
+            raise Exception(f"Command '{command.command}' failed validation.\nResponse: {response}")
+
         return response
     
     def close(self):
@@ -91,19 +143,19 @@ def get_serial_port():
 
 def main():
     port = get_serial_port()
-    
     print(f'Using COM port: {port}')
+    
     conn = Connection(port)
-
-    commands = config.commands
-
-    # Send commands and print output as if you were doing it manually
-    for command in commands:
-        if isinstance(command, tuple):
-            response = conn.send_command_with_wait(command[0], wait_for=command[1])
-        else:
-            response = conn.send_command(command)
-        print(response, end='')
+    
+    # Execute all commands from config
+    for cmd_dict in config.commands:
+        command = Command(cmd_dict)
+        try:
+            response = conn.execute_command(command)
+            print(f"Command: {command.command}\nResponse: {response}\n")
+        except Exception as e:
+            print(f"Error executing command '{command.command}': {str(e)}")
+            break
 
     conn.close()
 
