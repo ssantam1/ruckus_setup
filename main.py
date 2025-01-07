@@ -75,11 +75,10 @@ class Connection:
     def close(self):
         self.ser.close()
 
-def main():
+def get_serial_port():
     ports = serial.tools.list_ports.comports()
     if not ports:
-        print('No COM ports found')
-        return
+        raise Exception('No COM ports found')
     
     if len(ports) == 1:
         port = ports[0].device
@@ -87,6 +86,11 @@ def main():
         print('Multiple COM ports found:')
         print('\n'.join([('  ' + port.device) for port in ports]))
         port = input("Enter the desired COM port: ")
+
+    return port
+
+def main():
+    port = get_serial_port()
     
     print(f'Using COM port: {port}')
     conn = Connection(port)
