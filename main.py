@@ -66,6 +66,8 @@ class Connection:
             timeout=1
         )
 
+        self.wait_fors = []
+
         # Send newline to get a prompt and check current access level
         response = self.send_command('')
         self.access_level = self.check_access_level(response)
@@ -75,6 +77,20 @@ class Connection:
             self.access_level = self.check_access_level(response)
 
         assert self.access_level is not AccessLevel.LOGGED_OUT
+
+    def get_response(self):
+        response = self.ser.read_all().decode()
+        for wait_for in self.wait_fors:
+            if wait_for in response:
+                self.wait_fors.remove(wait_for)
+                return response
+        return response
+
+    def send_command(self, command: str, sleep=1):
+        self.ser.write((command + '\n').encode())
+        time.sleep(sleep)
+        response = self.get_response()
+        return response
 
     def check_access_level(self, response: str):
         if response.endswith('(config)#'):
@@ -102,25 +118,14 @@ class Connection:
 
         return response
 
-    def send_command(self, command: str, sleep=1):
-        self.ser.write((command + '\n').encode())
-        time.sleep(sleep)
-        response = self.ser.read_all().decode()
-        return response
-
     def execute_command(self, command: Command) -> str:
         response = self.send_command(command.command)
-        
-        if command.wait_for:
-            print(f"Waiting for: {command.wait_for}")
-            while command.wait_for not in response:
-                time.sleep(1)
-                new_response = self.ser.read_all().decode()
-                response += new_response
-                print(new_response, end='')
 
         if not command.validate_response(response):
             raise Exception(f"Command '{command.command}' failed validation.\nResponse: {response}")
+        
+        if command.wait_for:
+            self.wait_fors.append(command.wait_for)
 
         return response
     
@@ -156,6 +161,13 @@ def main():
         except Exception as e:
             print(f"Error executing command '{command.command}': {str(e)}")
             break
+
+    while conn.wait_fors:
+        print("Waiting for async command completion...")
+        time.sleep(1)
+        response = conn.get_response()
+        if response:
+            print(f"Response: {response}")
 
     conn.close()
 
