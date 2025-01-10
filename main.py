@@ -169,6 +169,14 @@ def main():
         if response:
             print(f"Response: {response}")
 
+    write_mem = Command(command="write memory", validators=["Configuration saved to NVRAM"])
+    to_user_mode = Command(command="exit", validators=[">"])
+    to_logout = Command(command="exit", validators=["Press Enter key to login"])
+
+    conn.execute_command(write_mem)
+    conn.execute_command(to_user_mode)
+    conn.execute_command(to_logout)
+
     conn.close()
 
 if __name__ == "__main__":
