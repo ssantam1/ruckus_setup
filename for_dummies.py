@@ -1,5 +1,6 @@
 import subprocess
 import sys
+import main
 
 def install_requirements():
     try:
@@ -10,11 +11,7 @@ def install_requirements():
         sys.exit(1)
 
 def run_main():
-    try:
-        subprocess.check_call([sys.executable, "main.py"])
-    except subprocess.CalledProcessError as e:
-        print(f"Error running main.py: {e}")
-        sys.exit(1)
+    main.main()
 
 if __name__ == "__main__":
     install_requirements()
