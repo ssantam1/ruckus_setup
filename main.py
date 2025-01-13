@@ -3,10 +3,12 @@ import serial.tools.list_ports
 import time
 import config
 from enum import Enum
-from typing import Optional, List, Dict
+
+default_user = 'super'
+default_pass = 'sp-admin'
 
 class Command:
-    def __init__(self, command_dict: Dict):
+    def __init__(self, command_dict: dict):
         self.command = command_dict['command']
         self.wait_for = command_dict.get('wait_for')
         self.validators = command_dict.get('validators', [])
@@ -24,30 +26,6 @@ class Command:
 
         # Check if any validator matches
         return any(validator in response for validator in self.validators)
-
-class CommandFactory:
-    @staticmethod
-    def create_rsa_key_command() -> Command:
-        return Command(
-            command="crypto key generate rsa",
-            wait_for="RSA Key pair is successfully created",
-            validators=[
-                "Creating RSA key pair, please wait",
-                "Key already exists"
-            ]
-        )
-
-    @staticmethod
-    def create_ssl_cert_command() -> Command:
-        return Command(
-            command="crypto-ssl certificate generate",
-            wait_for="ssl-certificate creation is successful",
-            validators=["Creating certificate, please wait"]
-        )
-
-    @staticmethod
-    def create_simple_command(command: str) -> Command:
-        return Command(command=command)
 
 class AccessLevel(Enum):
     LOGGED_OUT = 0
@@ -72,10 +50,18 @@ class Connection:
         response = self.send_command('')
         self.access_level = self.check_access_level(response)
 
+        # If not logged in, try config credentials
         if self.access_level is AccessLevel.LOGGED_OUT:
-            response = self.login(response=response)
+            response = self.login(config.username, config.password, response=response)
             self.access_level = self.check_access_level(response)
 
+        # If login failed, try default credentials
+        if self.access_level is AccessLevel.LOGGED_OUT:
+            print("User/pass in config.py failed, trying default credentials...")
+            response = self.login(default_user, default_pass, response=response)
+            self.access_level = self.check_access_level(response)
+
+        # If still not logged in, give up and stop everything
         assert self.access_level is not AccessLevel.LOGGED_OUT
 
     def get_response(self):
@@ -102,7 +88,7 @@ class Connection:
         else:
             return AccessLevel.LOGGED_OUT
         
-    def login(self, response:str=''):
+    def login(self, username: str, password: str, response: str = '') -> str:
         # We may need to cycle through a few prompts to get to the username prompt
         for _ in range(5):
             if 'Please Enter Login Name:' in response:
@@ -110,10 +96,11 @@ class Connection:
             response = self.send_command('')
         else:
             raise Exception('Could not find login prompt')
-
-        response = self.send_command(config.username)
+        
+        print(f"Logging in with {username}/{password}...")
+        response = self.send_command(username)
         assert 'Please Enter Password:' in response
-        response = self.send_command(config.password)
+        response = self.send_command(password)
         assert 'User login successful' in response
 
         return response
@@ -156,18 +143,20 @@ def main():
     for cmd_dict in config.commands:
         command = Command(cmd_dict)
         try:
+            print(f"Executing command: {command.command}")
             response = conn.execute_command(command)
-            print(f"Command: {command.command}\nResponse: {response}\n")
         except Exception as e:
             print(f"Error executing command '{command.command}': {str(e)}")
             break
-
+        
     while conn.wait_fors:
-        print("Waiting for async command completion...")
+        print("Waiting for command completion, please wait up to 1 minute...")
         time.sleep(1)
         response = conn.get_response()
         if response:
             print(f"Response: {response}")
+
+    print("Configuration complete, saving and logging out...")
 
     write_mem = Command(command="write memory", validators=["Configuration saved to NVRAM"])
     to_user_mode = Command(command="exit", validators=[">"])
@@ -178,6 +167,8 @@ def main():
     conn.execute_command(to_logout)
 
     conn.close()
+
+    print("Done!")
 
 if __name__ == "__main__":
     main()
