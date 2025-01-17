@@ -2,7 +2,7 @@ import serial
 import serial.tools.list_ports
 import time
 import config
-from enum import Enum
+from enum import IntEnum
 
 default_user = 'super'
 default_pass = 'sp-admin'
@@ -27,7 +27,7 @@ class Command:
         # Check if any validator matches
         return any(validator in response for validator in self.validators)
 
-class AccessLevel(Enum):
+class AccessLevel(IntEnum):
     LOGGED_OUT = 0
     USER = 1
     PRIVILEGED = 2
